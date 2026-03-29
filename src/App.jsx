@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { accounts, signalFeed, summaryStats, performanceData } from './mockData';
+import { useState, useEffect, useRef } from 'react';
+import { accounts, dailyActions, signalFeed, performanceData } from './mockData';
 
 /* ═══════════════════════════════════════════
    COLOR TOKENS — HubSpot Design Language
@@ -27,12 +27,28 @@ const C = {
   warmBg: '#fef8ee',
   green: '#00bda5',
   greenBg: '#e5f8f5',
+  blue: '#0091ae',
+  blueBg: '#e8f7fa',
+  purple: '#6a78d1',
+  purpleBg: '#f0f1fa',
 };
 
 /* ═══════════════════════════════════════════
    SVG ICONS
    ═══════════════════════════════════════════ */
 const Icon = {
+  aiQueue: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  ),
+  signal: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 20V4"/></svg>
+  ),
+  dashboard: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+  ),
+  info: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+  ),
   contacts: (color = '#fff') => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
   ),
@@ -43,19 +59,10 @@ const Icon = {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
   ),
   tasks: (color = '#fff') => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h11"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2 2h11"/></svg>
   ),
-  aiQueue: (color = '#fff') => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-  ),
-  signal: (color = '#fff') => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 20V4"/></svg>
-  ),
-  dashboard: (color = '#fff') => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-  ),
-  globe: (color = C.textLight) => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+  phone: (color = C.green) => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
   ),
   mail: (color = C.textLight) => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -63,14 +70,8 @@ const Icon = {
   linkedin: (color = '#0077b5') => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
   ),
-  briefcase: (color = C.textLight) => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-  ),
-  phone: (color = C.green) => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-  ),
-  phoneEnd: (color = '#f2545b') => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+  check: (color = C.green) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
   ),
   clock: (color = C.textMuted) => (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -84,18 +85,6 @@ const Icon = {
   arrowLeft: (color = C.textLight) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
   ),
-  close: (color = C.textMuted) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  ),
-  send: (color = '#fff') => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-  ),
-  check: (color = C.green) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-  ),
-  user: (color = C.textLight) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-  ),
   search: (color = C.textMuted) => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
   ),
@@ -105,8 +94,50 @@ const Icon = {
   settings: (color = '#fff') => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   ),
+  briefcase: (color = C.textLight) => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+  ),
+  globe: (color = C.textLight) => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+  ),
+  send: (color = '#fff') => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+  ),
+  chevronDown: (color = C.textMuted) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  ),
+  chevronRight: (color = C.textMuted) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  ),
+  play: (color = '#fff') => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  ),
+  refresh: (color = C.textMuted) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+  ),
   externalLink: (color = C.textMuted) => (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+  ),
+  user: (color = C.textLight) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  ),
+  target: (color = C.orange) => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+  ),
+  lightbulb: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+  ),
+  arrowRight: (color = '#fff') => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  ),
+  database: (color = C.teal) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+  ),
+  cpu: (color = C.orange) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+  ),
+  monitor: (color = C.navy) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
   ),
 };
 
@@ -117,30 +148,47 @@ const signalTypeIcon = {
   job: Icon.briefcase,
 };
 
-const signalIconMap = {
-  'Website Visit': 'globe',
-  'Email Engagement': 'mail',
-  'Email Reply': 'mail',
-  'Job Posting': 'briefcase',
-  'LinkedIn Activity': 'linkedin',
-  'Webinar': 'globe',
-  'Content Download': 'globe',
-  'Blog Engagement': 'globe',
+/* ═══════════════════════════════════════════
+   ACTION TYPE CONFIG
+   ═══════════════════════════════════════════ */
+const actionTypeConfig = {
+  'CALL': { color: C.orange, bg: C.orangeLight, icon: Icon.phone, label: 'CALL' },
+  'EMAIL': { color: C.blue, bg: C.blueBg, icon: Icon.mail, label: 'EMAIL' },
+  'LINKEDIN': { color: '#0077b5', bg: '#e8f4f8', icon: Icon.linkedin, label: 'LINKEDIN' },
+  'FOLLOW-UP': { color: C.purple, bg: C.purpleBg, icon: Icon.refresh, label: 'FOLLOW-UP' },
+  'RESEARCH': { color: C.textLight, bg: '#eaf0f6', icon: Icon.search, label: 'RESEARCH' },
+  'CREATE DEAL': { color: C.green, bg: C.greenBg, icon: Icon.deals, label: 'CREATE DEAL' },
+};
+
+const priorityConfig = {
+  urgent: { color: C.hot, bg: C.hotBg, label: 'Urgent' },
+  high: { color: C.warm, bg: C.warmBg, label: 'High' },
+  standard: { color: C.blue, bg: C.blueBg, label: 'Standard' },
 };
 
 /* ═══════════════════════════════════════════
-   MAIN APP
+   MAIN APP COMPONENT
    ═══════════════════════════════════════════ */
 export default function App() {
   const [activeView, setActiveView] = useState('queue');
   const [selectedAccountId, setSelectedAccountId] = useState(null);
-  const [showDialer, setShowDialer] = useState(null);
-  const [showCompose, setShowCompose] = useState(null);
+  const [expandedAction, setExpandedAction] = useState(null);
+  const [completedActions, setCompletedActions] = useState(new Set());
   const [toast, setToast] = useState(null);
   const [hoveredNav, setHoveredNav] = useState(null);
-  const [completedAccounts, setCompletedAccounts] = useState([]);
+  const [recentlyCompleted, setRecentlyCompleted] = useState(new Set());
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId) || null;
+  const completedCount = completedActions.size;
+  const totalActions = dailyActions.length;
+
+  const callCount = dailyActions.filter(a => a.type === 'CALL').length;
+  const emailCount = dailyActions.filter(a => a.type === 'EMAIL').length;
+  const linkedinCount = dailyActions.filter(a => a.type === 'LINKEDIN').length;
+  const followUpCount = dailyActions.filter(a => a.type === 'FOLLOW-UP' || a.type === 'RESEARCH' || a.type === 'CREATE DEAL').length;
+
+  const completedCalls = dailyActions.filter(a => a.type === 'CALL' && completedActions.has(a.id)).length;
+  const completedEmails = dailyActions.filter(a => a.type === 'EMAIL' && completedActions.has(a.id)).length;
 
   const navigateToAccount = (id) => {
     setSelectedAccountId(id);
@@ -152,22 +200,37 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleAction = (action, account) => {
-    if (action.type === 'call') {
-      const contact = account.contacts[0];
-      setShowDialer({ name: contact.name, phone: contact.phone, company: account.company });
-    } else if (action.type === 'email') {
-      const contact = account.contacts[0];
-      setShowCompose({ name: contact.name, email: contact.email, company: account.company, subject: action.subtitle });
-    } else if (action.type === 'deal') {
-      showToast(`Deal created for ${account.company} — added to pipeline`);
-    }
+  const markComplete = (actionId) => {
+    setCompletedActions(prev => {
+      const next = new Set(prev);
+      next.add(actionId);
+      return next;
+    });
+    setRecentlyCompleted(prev => {
+      const next = new Set(prev);
+      next.add(actionId);
+      return next;
+    });
+    setTimeout(() => {
+      setRecentlyCompleted(prev => {
+        const next = new Set(prev);
+        next.delete(actionId);
+        return next;
+      });
+      setExpandedAction(null);
+    }, 800);
+    showToast('Action completed');
+  };
+
+  const toggleExpand = (actionId) => {
+    setExpandedAction(expandedAction === actionId ? null : actionId);
   };
 
   const navItems = [
-    { id: 'queue', label: 'AI Priority Queue', icon: Icon.aiQueue, accent: true },
+    { id: 'queue', label: 'Action Queue', icon: Icon.aiQueue, accent: true },
     { id: 'signal', label: 'Signal Feed', icon: Icon.signal },
-    { id: 'dashboard', label: 'Performance', icon: Icon.dashboard },
+    { id: 'performance', label: 'Performance', icon: Icon.dashboard },
+    { id: 'howItWorks', label: 'How It Works', icon: Icon.lightbulb },
     { id: 'divider' },
     { id: 'contacts', label: 'Contacts', icon: Icon.contacts },
     { id: 'companies', label: 'Companies', icon: Icon.companies },
@@ -175,20 +238,16 @@ export default function App() {
     { id: 'tasks', label: 'Tasks', icon: Icon.tasks },
   ];
 
+  /* ═══════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════ */
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg }}>
       {/* ═══ LEFT SIDEBAR NAV ═══ */}
       <nav style={{
-        width: 56,
-        background: C.navy,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: 0,
-        flexShrink: 0,
-        zIndex: 100,
+        width: 56, background: C.navy, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', paddingTop: 0, flexShrink: 0, zIndex: 100,
       }}>
-        {/* HubSpot sprocket logo area */}
         <div style={{
           width: 56, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: C.navyDark, marginBottom: 8,
@@ -200,44 +259,37 @@ export default function App() {
           }}>H</div>
         </div>
 
-        {navItems.map((item) => {
+        {navItems.map((item, i) => {
           if (item.id === 'divider') {
-            return <div key="div" style={{ width: 32, height: 1, background: C.navyLight, margin: '8px 0' }} />;
+            return <div key={i} style={{ width: 32, height: 1, background: C.navyLight, margin: '8px 0' }} />;
           }
-          const isActive = (activeView === item.id) || (activeView === 'detail' && item.id === 'queue');
+          const isActive = activeView === item.id;
           const isHovered = hoveredNav === item.id;
+          const isStatic = ['contacts', 'companies', 'deals', 'tasks'].includes(item.id);
           return (
             <div
               key={item.id}
-              onClick={() => {
-                if (['contacts','companies','deals','tasks'].includes(item.id)) return;
-                setActiveView(item.id);
-                setSelectedAccountId(null);
-              }}
+              onClick={() => !isStatic && setActiveView(item.id)}
               onMouseEnter={() => setHoveredNav(item.id)}
               onMouseLeave={() => setHoveredNav(null)}
               style={{
-                width: 44, height: 44, borderRadius: 8, marginBottom: 4,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: ['contacts','companies','deals','tasks'].includes(item.id) ? 'default' : 'pointer',
-                background: isActive ? (item.accent ? C.orange : 'rgba(255,255,255,0.12)') : isHovered ? 'rgba(255,255,255,0.08)' : 'transparent',
+                width: 40, height: 40, borderRadius: 8, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', marginBottom: 4, cursor: isStatic ? 'default' : 'pointer',
+                background: isActive ? (item.accent ? C.orange : 'rgba(255,255,255,0.12)') : isHovered && !isStatic ? 'rgba(255,255,255,0.08)' : 'transparent',
                 transition: 'background 0.15s',
                 position: 'relative',
+                opacity: isStatic ? 0.4 : 1,
               }}
               title={item.label}
             >
-              {item.icon(isActive ? '#fff' : 'rgba(255,255,255,0.6)')}
-              {/* Tooltip */}
+              {item.icon(isActive && item.accent ? '#fff' : isActive ? '#fff' : 'rgba(255,255,255,0.65)')}
               {isHovered && (
                 <div style={{
-                  position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)',
-                  background: '#1a1a2e', color: '#fff', fontSize: 12, fontWeight: 500,
-                  padding: '6px 12px', borderRadius: 6, whiteSpace: 'nowrap',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 200,
-                  pointerEvents: 'none',
-                }}>
-                  {item.label}
-                </div>
+                  position: 'absolute', left: 50, top: '50%', transform: 'translateY(-50%)',
+                  background: C.navyDark, color: '#fff', padding: '4px 10px', borderRadius: 6,
+                  fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', zIndex: 1000,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                }}>{item.label}</div>
               )}
             </div>
           );
@@ -246,100 +298,92 @@ export default function App() {
 
       {/* ═══ MAIN CONTENT AREA ═══ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* ═══ TOP NAV BAR ═══ */}
+        {/* ═══ TOP BAR ═══ */}
         <header style={{
-          height: 52, background: C.navy, display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', padding: '0 24px', flexShrink: 0,
-          borderBottom: `1px solid ${C.navyDark}`,
+          height: 52, background: C.white, borderBottom: `1px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 24px', flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ color: C.orange, fontWeight: 700, fontSize: 15 }}>Financial Cents Portal</span>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'rgba(255,255,255,0.08)', borderRadius: 6, padding: '6px 14px',
-            }}>
-              {Icon.search('rgba(255,255,255,0.4)')}
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Search contacts, companies, deals...</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>Financial Cents Portal</span>
+            <span style={{ fontSize: 11, color: C.textMuted, background: C.borderLight, padding: '2px 8px', borderRadius: 4 }}>HubSpot CRM Extension</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              {Icon.bell('rgba(255,255,255,0.7)')}
-              <div style={{
-                position: 'absolute', top: -4, right: -4, width: 8, height: 8,
-                borderRadius: '50%', background: C.orange,
-              }} />
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, background: C.bg,
+              borderRadius: 6, padding: '6px 12px', border: `1px solid ${C.borderLight}`,
+            }}>
+              {Icon.search()}
+              <span style={{ fontSize: 13, color: C.textMuted }}>Search contacts, companies...</span>
             </div>
-            {Icon.settings('rgba(255,255,255,0.5)')}
+            <div style={{ position: 'relative', cursor: 'pointer' }}>
+              {Icon.bell(C.textLight)}
+              <div style={{
+                position: 'absolute', top: -4, right: -4, width: 14, height: 14,
+                background: C.hot, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 700,
+              }}>5</div>
+            </div>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', background: C.orange,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-            }}>JD</div>
+              fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer',
+            }}>SM</div>
           </div>
         </header>
 
-        {/* ═══ CONTENT AREA ═══ */}
-        <main style={{ flex: 1, overflow: 'auto', padding: 0 }}>
+        {/* ═══ CONTENT ═══ */}
+        <main style={{ flex: 1, overflow: 'auto', padding: activeView === 'howItWorks' ? 0 : '24px 28px' }}>
           {activeView === 'queue' && (
             <QueueView
+              completedActions={completedActions}
+              completedCount={completedCount}
+              totalActions={totalActions}
+              expandedAction={expandedAction}
+              toggleExpand={toggleExpand}
+              markComplete={markComplete}
               navigateToAccount={navigateToAccount}
-              completedAccounts={completedAccounts}
+              recentlyCompleted={recentlyCompleted}
+              callCount={callCount}
+              emailCount={emailCount}
+              linkedinCount={linkedinCount}
+              followUpCount={followUpCount}
+              completedCalls={completedCalls}
+              completedEmails={completedEmails}
             />
           )}
           {activeView === 'detail' && selectedAccount && (
-            <DetailView
+            <AccountDetailView
               account={selectedAccount}
-              onBack={() => { setActiveView('queue'); setSelectedAccountId(null); }}
-              onAction={(action) => handleAction(action, selectedAccount)}
+              onBack={() => setActiveView('queue')}
               navigateToAccount={navigateToAccount}
             />
           )}
           {activeView === 'signal' && (
             <SignalFeedView navigateToAccount={navigateToAccount} />
           )}
-          {activeView === 'dashboard' && (
-            <DashboardView />
+          {activeView === 'performance' && (
+            <PerformanceView
+              completedCount={completedCount}
+              totalActions={totalActions}
+              completedCalls={completedCalls}
+              completedEmails={completedEmails}
+            />
+          )}
+          {activeView === 'howItWorks' && (
+            <HowItWorksView />
           )}
         </main>
-
-        {/* ═══ FOOTER ═══ */}
-        <footer style={{
-          height: 36, background: '#fff', borderTop: `1px solid ${C.borderLight}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, color: C.textMuted, flexShrink: 0, gap: 4,
-        }}>
-          Powered by <span style={{ color: C.orange, fontWeight: 600 }}>Skaled</span> — AI Jumpstart Program
-          <span style={{ margin: '0 8px', color: C.border }}>|</span>
-          This demo shows how SDR Prioritization lives natively inside HubSpot. No separate tools. No context switching.
-        </footer>
       </div>
-
-      {/* ═══ DIALER OVERLAY ═══ */}
-      {showDialer && (
-        <DialerOverlay
-          contact={showDialer}
-          onClose={() => setShowDialer(null)}
-        />
-      )}
-
-      {/* ═══ EMAIL COMPOSE OVERLAY ═══ */}
-      {showCompose && (
-        <ComposeOverlay
-          contact={showCompose}
-          onClose={() => setShowCompose(null)}
-          onSend={() => { setShowCompose(null); showToast('Email sent successfully'); }}
-        />
-      )}
 
       {/* ═══ TOAST ═══ */}
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-          background: C.navy, color: '#fff', padding: '12px 24px', borderRadius: 8,
-          fontSize: 14, fontWeight: 500, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-          display: 'flex', alignItems: 'center', gap: 8, zIndex: 9999,
-          animation: 'slideUp 0.3s ease-out',
+          position: 'fixed', bottom: 24, right: 24, background: C.navy, color: '#fff',
+          padding: '12px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: 8, zIndex: 10000,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+          animation: 'slideUp 0.3s ease',
         }}>
           {Icon.check('#fff')}
           {toast}
@@ -349,155 +393,929 @@ export default function App() {
   );
 }
 
+
 /* ═══════════════════════════════════════════
-   VIEW 1: AI PRIORITY QUEUE
+   VIEW 1: TODAY'S ACTION QUEUE
    ═══════════════════════════════════════════ */
-function QueueView({ navigateToAccount, completedAccounts }) {
-  const [hoveredRow, setHoveredRow] = useState(null);
+function QueueView({
+  completedActions, completedCount, totalActions, expandedAction,
+  toggleExpand, markComplete, navigateToAccount, recentlyCompleted,
+  callCount, emailCount, linkedinCount, followUpCount,
+  completedCalls, completedEmails,
+}) {
+  const progressPct = (completedCount / totalActions) * 100;
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Page Header */}
-      <div style={{
-        padding: '20px 28px 16px', background: '#fff', borderBottom: `1px solid ${C.borderLight}`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>AI Priority Queue</h1>
-            <p style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
-              Your prioritized outreach list for today, ranked by AI scoring
-            </p>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>
+            Sarah's Daily Queue
+          </h1>
+          <span style={{ fontSize: 13, color: C.textMuted }}>March 29, 2026</span>
+        </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+          fontSize: 13, color: C.textLight,
+        }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: C.greenBg, color: C.green, padding: '2px 10px',
+            borderRadius: 20, fontSize: 12, fontWeight: 600,
+          }}>
+            {Icon.zap(C.green)} AI Confidence: High
+          </span>
+          <span>12 accounts showing active buying signals today</span>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{
+          background: C.borderLight, borderRadius: 6, height: 8, marginBottom: 12,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', borderRadius: 6,
+            background: `linear-gradient(90deg, ${C.teal}, ${C.green})`,
+            width: `${progressPct}%`,
+            transition: 'width 0.5s ease',
+          }} />
+        </div>
+
+        {/* Stats row */}
+        <div style={{
+          display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <StatPill label="Actions" value={`${completedCount}/${totalActions}`} />
+            <StatPill label="Calls" value={`${completedCalls}/${callCount}`} color={C.orange} />
+            <StatPill label="Emails" value={`${completedEmails}/${emailCount}`} color={C.blue} />
+            <StatPill label="LinkedIn" value={`${dailyActions.filter(a=>a.type==='LINKEDIN'&&completedActions.has(a.id)).length}/${linkedinCount}`} color="#0077b5" />
+            <StatPill label="Other" value={`${dailyActions.filter(a=>['FOLLOW-UP','RESEARCH','CREATE DEAL'].includes(a.type)&&completedActions.has(a.id)).length}/${followUpCount}`} color={C.purple} />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              ...btnOutline, display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              {Icon.signal(C.textLight)}
-              Refresh Signals
-            </button>
+          <div style={{
+            fontSize: 12, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            {Icon.clock()}
+            Est. queue time: 2.5 hours
           </div>
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16,
-        padding: '20px 28px',
-      }}>
-        <StatCard label="Today's Queue" value={summaryStats.todayQueue} suffix=" accounts" icon="queue" color={C.orange} />
-        <StatCard label="Signals Detected" value={summaryStats.signalsDetected} icon="signal" color={C.teal} />
-        <StatCard label="Est. Pipeline Value" value={summaryStats.estimatedPipeline} icon="deals" color={C.green} />
-        <StatCard label="Queue Completion" value={summaryStats.queueCompletion} icon="tasks" color={C.textMuted} />
+      {/* Action Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {dailyActions.map((action) => (
+          <ActionCard
+            key={action.id}
+            action={action}
+            isCompleted={completedActions.has(action.id)}
+            isExpanded={expandedAction === action.id}
+            isRecentlyCompleted={recentlyCompleted.has(action.id)}
+            onToggle={() => toggleExpand(action.id)}
+            onComplete={() => markComplete(action.id)}
+            onNavigate={() => navigateToAccount(action.accountId)}
+          />
+        ))}
       </div>
+    </div>
+  );
+}
 
-      {/* Priority Queue Table */}
-      <div style={{ padding: '0 28px 28px' }}>
+function StatPill({ label, value, color }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+      background: C.white, border: `1px solid ${C.borderLight}`, borderRadius: 6,
+      padding: '4px 10px',
+    }}>
+      <span style={{ color: C.textMuted, fontWeight: 400 }}>{label}:</span>
+      <span style={{ color: color || C.text, fontWeight: 600 }}>{value}</span>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════
+   ACTION CARD
+   ═══════════════════════════════════════════ */
+function ActionCard({ action, isCompleted, isExpanded, isRecentlyCompleted, onToggle, onComplete, onNavigate }) {
+  const config = actionTypeConfig[action.type];
+  const pConfig = priorityConfig[action.priority];
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: isCompleted ? '#fafcfa' : C.white,
+        border: `1px solid ${isRecentlyCompleted ? C.green : isExpanded ? C.orange : hovered ? C.border : C.borderLight}`,
+        borderRadius: 10,
+        transition: 'all 0.25s ease',
+        opacity: isCompleted && !isRecentlyCompleted ? 0.55 : 1,
+        overflow: 'hidden',
+        ...(isRecentlyCompleted ? { boxShadow: `0 0 0 2px ${C.greenBg}` } : {}),
+      }}
+    >
+      {/* Main Row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 14,
+        cursor: 'pointer',
+      }} onClick={onToggle}>
+        {/* Priority Number */}
         <div style={{
-          background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-          overflow: 'hidden',
+          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700,
+          background: isCompleted ? C.greenBg : pConfig.bg,
+          color: isCompleted ? C.green : pConfig.color,
         }}>
-          {/* Table Header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '60px 2fr 100px 120px 100px 140px',
-            padding: '12px 20px',
-            background: '#f5f8fa',
-            borderBottom: `1px solid ${C.borderLight}`,
-            fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}>
-            <span>Priority</span>
-            <span>Company</span>
-            <span>Fit Score</span>
-            <span>Signals</span>
-            <span>Status</span>
-            <span style={{ textAlign: 'right' }}>Actions</span>
-          </div>
+          {isCompleted ? Icon.check(C.green) : `#${action.id}`}
+        </div>
 
-          {/* Table Rows */}
-          {accounts.map((acct) => (
-            <div
-              key={acct.id}
-              onClick={() => navigateToAccount(acct.id)}
-              onMouseEnter={() => setHoveredRow(acct.id)}
-              onMouseLeave={() => setHoveredRow(null)}
+        {/* Action Type Badge */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          background: config.bg, color: config.color,
+          padding: '3px 10px', borderRadius: 5, fontSize: 10,
+          fontWeight: 700, letterSpacing: '0.5px', flexShrink: 0,
+          textTransform: 'uppercase',
+        }}>
+          {config.icon(config.color)}
+          {config.label}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 13, fontWeight: 600, color: C.text,
+            textDecoration: isCompleted ? 'line-through' : 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {action.contactName && (
+              <span>{action.contactName} — </span>
+            )}
+            <span
+              onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+              style={{ color: C.orange, cursor: 'pointer', fontWeight: 500 }}
+            >{action.company}</span>
+          </div>
+          <div style={{
+            fontSize: 12, color: C.textLight, marginTop: 2,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {action.reason}
+          </div>
+        </div>
+
+        {/* Right side */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+        }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{action.timeSlot}</div>
+            <div style={{ fontSize: 11, color: C.textMuted }}>{action.duration}</div>
+          </div>
+          {!isCompleted && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '60px 2fr 100px 120px 100px 140px',
-                padding: '16px 20px',
-                alignItems: 'center',
-                borderBottom: `1px solid ${C.borderLight}`,
-                cursor: 'pointer',
-                background: hoveredRow === acct.id ? '#f0f5fa' : '#fff',
-                transition: 'background 0.12s',
+                background: isExpanded ? C.orangeLight : C.green,
+                color: isExpanded ? C.orange : '#fff',
+                border: 'none', borderRadius: 6, padding: '6px 14px',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'all 0.15s',
               }}
             >
-              {/* Priority */}
-              <div>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: acct.priority <= 2 ? C.orange : C.borderLight,
-                  color: acct.priority <= 2 ? '#fff' : C.text,
-                  fontSize: 14, fontWeight: 700,
-                }}>
-                  {acct.priority}
-                </span>
-              </div>
+              {isExpanded ? 'Close' : (<>{Icon.play()} Start</>)}
+            </button>
+          )}
+        </div>
+      </div>
 
-              {/* Company */}
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: C.text }}>{acct.company}</div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {acct.overview.size} &middot; {acct.overview.location} &middot; {acct.overview.currentTools}
-                </div>
-              </div>
+      {/* Expanded Panel */}
+      {isExpanded && !isCompleted && (
+        <ExpandedPanel action={action} onComplete={onComplete} onNavigate={onNavigate} />
+      )}
+    </div>
+  );
+}
 
-              {/* Fit Score */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{
-                    width: 48, height: 6, borderRadius: 3, background: C.borderLight, overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      width: `${acct.fitScore}%`, height: '100%', borderRadius: 3,
-                      background: acct.fitScore >= 90 ? C.teal : acct.fitScore >= 85 ? C.orange : C.warm,
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{acct.fitScore}</span>
-                </div>
-              </div>
 
-              {/* Signals */}
+/* ═══════════════════════════════════════════
+   EXPANDED PANEL (inline, varies by type)
+   ═══════════════════════════════════════════ */
+function ExpandedPanel({ action, onComplete, onNavigate }) {
+  if (action.type === 'CALL') return <CallPanel action={action} onComplete={onComplete} onNavigate={onNavigate} />;
+  if (action.type === 'EMAIL' || action.type === 'FOLLOW-UP') return <EmailPanel action={action} onComplete={onComplete} />;
+  if (action.type === 'LINKEDIN') return <LinkedInPanel action={action} onComplete={onComplete} />;
+  if (action.type === 'RESEARCH') return <ResearchPanel action={action} onComplete={onComplete} onNavigate={onNavigate} />;
+  if (action.type === 'CREATE DEAL') return <DealPanel action={action} onComplete={onComplete} />;
+  return null;
+}
+
+function CallPanel({ action, onComplete, onNavigate }) {
+  return (
+    <div style={{
+      padding: '0 16px 16px', borderTop: `1px solid ${C.borderLight}`,
+      animation: 'fadeIn 0.2s ease',
+    }}>
+      <div style={{ paddingTop: 16 }}>
+        {/* Contact info row */}
+        <div style={{
+          display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap',
+        }}>
+          <div style={{
+            flex: '1 1 250px', background: C.orangeLight, borderRadius: 8, padding: 14,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Contact</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{action.contactName}</div>
+            <div style={{ fontSize: 12, color: C.textLight, marginBottom: 8 }}>{action.contactTitle} — {action.company}</div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: C.white, border: `2px solid ${C.green}`, borderRadius: 8, padding: '8px 16px',
+              cursor: 'pointer',
+            }}>
+              {Icon.phone(C.green)}
+              <span style={{ fontSize: 16, fontWeight: 700, color: C.green, letterSpacing: '0.5px' }}>{action.contactPhone}</span>
+            </div>
+          </div>
+
+          {/* Quick Brief */}
+          <div style={{ flex: '1 1 300px', background: C.bg, borderRadius: 8, padding: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Quick Brief</div>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: C.textLight, lineHeight: 1.7 }}>
+              {action.callBrief?.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Opening line */}
+        <div style={{
+          background: '#f7f9fb', border: `1px solid ${C.borderLight}`, borderRadius: 8,
+          padding: 14, marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Opening Line</div>
+          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.6, fontStyle: 'italic' }}>
+            "{action.openingLine}"
+          </div>
+        </div>
+
+        {/* Discovery questions */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 250px' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Discovery Questions</div>
+            {action.discoveryQuestions?.map((q, i) => (
+              <div key={i} style={{
+                fontSize: 12, color: C.text, padding: '6px 10px', marginBottom: 4,
+                background: C.white, border: `1px solid ${C.borderLight}`, borderRadius: 6, lineHeight: 1.5,
+              }}>
+                {i + 1}. {q}
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: '1 1 250px' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Objection Handler</div>
+            <div style={{
+              fontSize: 12, color: C.text, padding: '8px 10px',
+              background: C.warmBg, border: `1px solid #f0e0c0`, borderRadius: 6, lineHeight: 1.5, marginBottom: 8,
+            }}>
+              {action.objectionHandler}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Suggested CTA</div>
+            <div style={{
+              fontSize: 12, color: C.green, fontWeight: 600, padding: '8px 10px',
+              background: C.greenBg, borderRadius: 6,
+            }}>
+              {action.suggestedCTA}
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onComplete} style={{
+            background: C.green, color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {Icon.check('#fff')} Mark Complete
+          </button>
+          <button style={{
+            background: C.white, color: C.textLight, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            Reschedule
+          </button>
+          <button onClick={onNavigate} style={{
+            background: C.white, color: C.orange, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            View Account
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmailPanel({ action, onComplete }) {
+  return (
+    <div style={{
+      padding: '0 16px 16px', borderTop: `1px solid ${C.borderLight}`,
+      animation: 'fadeIn 0.2s ease',
+    }}>
+      <div style={{ paddingTop: 16 }}>
+        <div style={{
+          background: C.white, border: `1px solid ${C.border}`, borderRadius: 8,
+          overflow: 'hidden', marginBottom: 12,
+        }}>
+          <div style={{
+            padding: '10px 14px', borderBottom: `1px solid ${C.borderLight}`,
+            display: 'flex', gap: 8, fontSize: 12,
+          }}>
+            <span style={{ color: C.textMuted }}>To:</span>
+            <span style={{ color: C.text, fontWeight: 500 }}>{action.contactName} &lt;{action.contactEmail}&gt;</span>
+          </div>
+          <div style={{
+            padding: '10px 14px', borderBottom: `1px solid ${C.borderLight}`,
+            display: 'flex', gap: 8, fontSize: 12,
+          }}>
+            <span style={{ color: C.textMuted }}>Subject:</span>
+            <span style={{ color: C.text, fontWeight: 600 }}>{action.emailSubject}</span>
+          </div>
+          <div style={{
+            padding: 14, fontSize: 13, color: C.text, lineHeight: 1.7,
+            whiteSpace: 'pre-line', background: '#fafbfc',
+          }}>
+            {action.emailBody}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onComplete} style={{
+            background: C.blue, color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {Icon.send()} Send Email
+          </button>
+          <button style={{
+            background: C.white, color: C.textLight, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            Edit Draft
+          </button>
+          <button style={{
+            background: C.white, color: C.textLight, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            Reschedule
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkedInPanel({ action, onComplete }) {
+  return (
+    <div style={{
+      padding: '0 16px 16px', borderTop: `1px solid ${C.borderLight}`,
+      animation: 'fadeIn 0.2s ease',
+    }}>
+      <div style={{ paddingTop: 16 }}>
+        <div style={{
+          background: '#f3f6f8', border: '1px solid #d8dee4', borderRadius: 8,
+          padding: 16, marginBottom: 12,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+          }}>
+            {Icon.linkedin('#0077b5')}
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#0077b5' }}>LinkedIn Message</span>
+          </div>
+          <div style={{
+            background: C.white, borderRadius: 6, padding: 14, fontSize: 13,
+            color: C.text, lineHeight: 1.7, whiteSpace: 'pre-line',
+            border: '1px solid #e0e4e8',
+          }}>
+            {action.linkedinMessage}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onComplete} style={{
+            background: '#0077b5', color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {Icon.check('#fff')} Mark Complete
+          </button>
+          <button style={{
+            background: C.white, color: C.textLight, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            Open LinkedIn
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResearchPanel({ action, onComplete, onNavigate }) {
+  return (
+    <div style={{
+      padding: '0 16px 16px', borderTop: `1px solid ${C.borderLight}`,
+      animation: 'fadeIn 0.2s ease',
+    }}>
+      <div style={{ paddingTop: 16 }}>
+        <div style={{
+          background: C.bg, borderRadius: 8, padding: 16, marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Research Checklist</div>
+          {action.researchTasks?.map((task, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0',
+              borderBottom: i < action.researchTasks.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: 4, border: `2px solid ${C.border}`,
+                flexShrink: 0, marginTop: 1, cursor: 'pointer',
+              }} />
+              <span style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>{task}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onComplete} style={{
+            background: C.green, color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {Icon.check('#fff')} Mark Complete
+          </button>
+          <button onClick={onNavigate} style={{
+            background: C.white, color: C.orange, border: `1px solid ${C.border}`,
+            borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            View Account
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DealPanel({ action, onComplete }) {
+  const d = action.dealDetails;
+  return (
+    <div style={{
+      padding: '0 16px 16px', borderTop: `1px solid ${C.borderLight}`,
+      animation: 'fadeIn 0.2s ease',
+    }}>
+      <div style={{ paddingTop: 16 }}>
+        <div style={{
+          background: C.greenBg, borderRadius: 8, padding: 16, marginBottom: 12,
+          border: `1px solid #b8e8df`,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.green, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Deal to Create</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+            <DealField label="Deal Name" value={d.dealName} />
+            <DealField label="Amount" value={d.amount} />
+            <DealField label="Seats" value={d.seats} />
+            <DealField label="Stage" value={d.stage} />
+            <DealField label="Expected Close" value={d.closeDate} />
+            <DealField label="Primary Contact" value={d.primaryContact} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <DealField label="Notes" value={d.notes} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onComplete} style={{
+            background: C.green, color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {Icon.check('#fff')} Create Deal
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DealField({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</div>
+      <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{value}</div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════
+   VIEW 2: ACCOUNT DETAIL
+   ═══════════════════════════════════════════ */
+function AccountDetailView({ account, onBack, navigateToAccount }) {
+  const accountActions = dailyActions.filter(a => a.accountId === account.id);
+  const accountSignals = signalFeed.filter(s => s.accountId === account.id);
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* Back button */}
+      <button onClick={onBack} style={{
+        display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+        color: C.orange, fontSize: 13, fontWeight: 500, cursor: 'pointer', marginBottom: 16,
+        padding: 0,
+      }}>
+        {Icon.arrowLeft(C.orange)} Back to Action Queue
+      </button>
+
+      {/* Company Header */}
+      <div style={{
+        background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 24, marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, margin: 0 }}>{account.company}</h2>
+            <div style={{ fontSize: 13, color: C.textLight, marginTop: 4 }}>
+              {account.size} &middot; {account.location} &middot; {account.industry}
+            </div>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: account.aiScore >= 85 ? C.hotBg : C.warmBg,
+            color: account.aiScore >= 85 ? C.hot : C.warm,
+            padding: '6px 14px', borderRadius: 20, fontSize: 14, fontWeight: 700,
+          }}>
+            AI Score: {account.aiScore}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+          <InfoBlock label="Revenue" value={account.revenue} />
+          <InfoBlock label="Current Tools" value={account.currentTools} />
+          <InfoBlock label="Deal Value" value={account.dealValue} />
+          <InfoBlock label="Seats" value={account.seats} />
+          <InfoBlock label="Website" value={account.website} />
+          <InfoBlock label="Founded" value={account.founded} />
+        </div>
+      </div>
+
+      {/* Score breakdown */}
+      <div style={{
+        background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 20, marginBottom: 16,
+      }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>Why AI Prioritized This Account</h3>
+        <div style={{ fontSize: 13, color: C.textLight, lineHeight: 1.7, marginBottom: 16 }}>
+          {account.whyPrioritized}
+        </div>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <ScoreBar label="Fit Score" value={account.fitScore} color={C.teal} />
+          <ScoreBar label="Intent Score" value={account.intentScore} color={C.orange} />
+          <ScoreBar label="Timing Score" value={account.timingScore} color={C.purple} />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Contacts */}
+        <div style={{
+          background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: 20,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>Key Contacts</h3>
+          {account.contacts.filter(c => c.name !== 'TBD').map((contact, i) => (
+            <div key={i} style={{
+              padding: '10px 0', borderBottom: i < account.contacts.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{acct.signalCount}</span>
-                <span style={{ fontSize: 12, color: C.textMuted }}>signals</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{contact.name}</span>
+                {contact.isPrimary && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 600, color: C.orange, background: C.orangeLight,
+                    padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase',
+                  }}>Primary</span>
+                )}
               </div>
+              <div style={{ fontSize: 12, color: C.textLight }}>{contact.title}</div>
+              {contact.phone && (
+                <div style={{ fontSize: 12, color: C.green, marginTop: 2 }}>{contact.phone}</div>
+              )}
+              {contact.email && (
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{contact.email}</div>
+              )}
+            </div>
+          ))}
+        </div>
 
-              {/* Status */}
-              <div>
+        {/* Today's Actions for this account */}
+        <div style={{
+          background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: 20,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>
+            Today's Actions ({accountActions.length})
+          </h3>
+          {accountActions.map((action, i) => {
+            const config = actionTypeConfig[action.type];
+            return (
+              <div key={i} style={{
+                padding: '8px 0', borderBottom: i < accountActions.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
-                  textTransform: 'uppercase', letterSpacing: '0.03em',
-                  ...(acct.strength === 'Hot'
-                    ? { background: C.hotBg, color: C.hot }
-                    : { background: C.warmBg, color: C.warm }),
-                }}>
-                  {acct.strength === 'Hot' && Icon.fire()} {acct.strength}
-                </span>
+                  fontSize: 10, fontWeight: 700, color: config.color, background: config.bg,
+                  padding: '2px 8px', borderRadius: 4, flexShrink: 0,
+                }}>{config.label}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{action.action}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{action.timeSlot} &middot; {action.duration}</div>
+                </div>
               </div>
+            );
+          })}
+          {accountActions.length === 0 && (
+            <div style={{ fontSize: 13, color: C.textMuted, padding: '16px 0' }}>No actions scheduled for today.</div>
+          )}
+        </div>
+      </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigateToAccount(acct.id); }}
-                  style={{
-                    ...btnPrimary, fontSize: 12, padding: '6px 14px',
-                  }}
-                >
-                  View Account
-                </button>
+      {/* Activity Timeline / Signals */}
+      <div style={{
+        background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 20, marginBottom: 16,
+      }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>Signal Timeline</h3>
+        {account.signals.map((signal, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0',
+            borderBottom: i < account.signals.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+              background: signal.strength === 'hot' ? C.hot : C.warm,
+            }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{signal.type}</div>
+              <div style={{ fontSize: 12, color: C.textLight, lineHeight: 1.5 }}>{signal.detail}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{signal.time}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Call Script */}
+      {account.callScript && (
+        <div style={{
+          background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+          padding: 20, marginBottom: 16,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>AI Call Script</h3>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.orange, textTransform: 'uppercase', marginBottom: 4 }}>Opening</div>
+            <div style={{
+              fontSize: 13, color: C.text, lineHeight: 1.6, fontStyle: 'italic',
+              background: C.bg, padding: 12, borderRadius: 6,
+            }}>"{account.callScript.opening}"</div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', marginBottom: 4 }}>Discovery Questions</div>
+            {account.callScript.discoveryQuestions.map((q, i) => (
+              <div key={i} style={{
+                fontSize: 12, color: C.text, padding: '6px 10px', marginBottom: 4,
+                background: C.bg, borderRadius: 6, lineHeight: 1.5,
+              }}>
+                {i + 1}. {q}
               </div>
+            ))}
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', marginBottom: 4 }}>Objection Handler</div>
+            <div style={{ fontSize: 12, color: C.text, padding: '8px 10px', background: C.warmBg, borderRadius: 6, lineHeight: 1.5 }}>
+              {account.callScript.objectionHandler}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, textTransform: 'uppercase', marginBottom: 4 }}>Suggested CTA</div>
+            <div style={{ fontSize: 12, color: C.green, fontWeight: 600, padding: '8px 10px', background: C.greenBg, borderRadius: 6 }}>
+              {account.callScript.suggestedCTA}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoBlock({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</div>
+      <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{value}</div>
+    </div>
+  );
+}
+
+function ScoreBar({ label, value, color }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 11, color: C.textMuted }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color }}>{value}</span>
+      </div>
+      <div style={{ height: 6, background: C.borderLight, borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: 3, transition: 'width 0.5s' }} />
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════
+   VIEW 3: SIGNAL FEED
+   ═══════════════════════════════════════════ */
+function SignalFeedView({ navigateToAccount }) {
+  return (
+    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: C.text, margin: 0 }}>Signal Feed</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <FilterBadge label="All" active />
+          <FilterBadge label="Hot" />
+          <FilterBadge label="Warm" />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {signalFeed.map((signal) => {
+          const iconFn = signalTypeIcon[signal.type] || Icon.globe;
+          return (
+            <div key={signal.id} style={{
+              background: C.white, borderRadius: 8, border: `1px solid ${C.borderLight}`,
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                background: signal.strength === 'hot' ? C.hot : C.warm,
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                  <span
+                    onClick={() => navigateToAccount(signal.accountId)}
+                    style={{ color: C.orange, cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    {signal.account}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: C.textLight, marginTop: 2 }}>{signal.action}</div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>{signal.time}</div>
+              <div style={{
+                fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, flexShrink: 0,
+                textTransform: 'uppercase',
+                background: signal.strength === 'hot' ? C.hotBg : C.warmBg,
+                color: signal.strength === 'hot' ? C.hot : C.warm,
+              }}>{signal.strength}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FilterBadge({ label, active }) {
+  return (
+    <span style={{
+      fontSize: 12, fontWeight: 500, padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
+      background: active ? C.navy : C.white,
+      color: active ? '#fff' : C.textLight,
+      border: active ? 'none' : `1px solid ${C.border}`,
+    }}>{label}</span>
+  );
+}
+
+
+/* ═══════════════════════════════════════════
+   VIEW 4: PERFORMANCE
+   ═══════════════════════════════════════════ */
+function PerformanceView({ completedCount, totalActions, completedCalls, completedEmails }) {
+  const pd = performanceData;
+
+  const totalPipeline = accounts.reduce((sum, a) => {
+    const val = parseInt(a.dealValue?.replace(/[^0-9]/g, '') || '0');
+    return sum + val;
+  }, 0);
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: C.text, margin: '0 0 20px' }}>Performance Dashboard</h1>
+
+      {/* Today's stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        <MetricCard label="Actions Completed" value={`${completedCount}/${totalActions}`} progress={(completedCount/totalActions)*100} color={C.teal} />
+        <MetricCard label="Calls Made" value={`${completedCalls}/${pd.callsTotal}`} progress={(completedCalls/pd.callsTotal)*100} color={C.orange} />
+        <MetricCard label="Emails Sent" value={`${completedEmails}/${pd.emailsTotal}`} progress={(completedEmails/pd.emailsTotal)*100} color={C.blue} />
+        <MetricCard label="Pipeline Influenced" value={`$${(completedCount * 4800).toLocaleString()}`} subtitle={`Target: $${totalPipeline.toLocaleString()}`} color={C.green} />
+      </div>
+
+      {/* Weekly trend */}
+      <div style={{
+        background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 20, marginBottom: 16,
+      }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 16px' }}>Weekly Completion Rate</h3>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', height: 120 }}>
+          {pd.weeklyCompletion.map((day, i) => {
+            const pct = day.total > 0 ? (day.completed / day.total) * 100 : 0;
+            const isToday = day.day === 'Fri';
+            return (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{day.completed}/{day.total}</div>
+                <div style={{
+                  width: '100%', maxWidth: 60, background: C.borderLight, borderRadius: 6,
+                  height: 80, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: '100%', borderRadius: 6,
+                    height: `${pct}%`,
+                    background: isToday ? `linear-gradient(180deg, ${C.orange}, ${C.orangeHover})` : `linear-gradient(180deg, ${C.teal}, #009b87)`,
+                    transition: 'height 0.5s ease',
+                    minHeight: pct > 0 ? 4 : 0,
+                  }} />
+                </div>
+                <div style={{
+                  fontSize: 11, fontWeight: isToday ? 700 : 500,
+                  color: isToday ? C.orange : C.textMuted,
+                }}>{day.day}{isToday ? ' (today)' : ''}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Conversion Funnel */}
+        <div style={{
+          background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: 20,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 16px' }}>Conversion Funnel</h3>
+          {Object.entries(pd.conversionRates).map(([key, val], i) => {
+            const labels = {
+              signalToCall: 'Signal to Call',
+              callToMeeting: 'Call to Meeting',
+              meetingToDemo: 'Meeting to Demo',
+              demoToClose: 'Demo to Close',
+            };
+            const pct = parseInt(val);
+            return (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: C.textLight }}>{labels[key]}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{val}</span>
+                </div>
+                <div style={{ height: 6, background: C.borderLight, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${pct}%`, borderRadius: 3,
+                    background: `linear-gradient(90deg, ${C.teal}, ${C.green})`,
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Top Performing Signals */}
+        <div style={{
+          background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: 20,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 16px' }}>Top Performing Signals</h3>
+          {pd.topPerformingSignals.map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0',
+              borderBottom: i < pd.topPerformingSignals.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+            }}>
+              <span style={{
+                fontSize: 12, fontWeight: 700, color: C.text, width: 32, textAlign: 'right',
+              }}>{s.conversion}%</span>
+              <div style={{ flex: 1, height: 6, background: C.borderLight, borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${s.conversion}%`, borderRadius: 3,
+                  background: i === 0 ? C.hot : i < 3 ? C.orange : C.teal,
+                }} />
+              </div>
+              <span style={{ fontSize: 12, color: C.textLight, minWidth: 120 }}>{s.signal}</span>
             </div>
           ))}
         </div>
@@ -506,975 +1324,251 @@ function QueueView({ navigateToAccount, completedAccounts }) {
   );
 }
 
-/* ═══════════════════════════════════════════
-   VIEW 2: ACCOUNT DETAIL
-   ═══════════════════════════════════════════ */
-function DetailView({ account, onBack, onAction, navigateToAccount }) {
-  const a = account;
-  const [hoveredAction, setHoveredAction] = useState(null);
-  const [expandedScript, setExpandedScript] = useState(true);
-
+function MetricCard({ label, value, subtitle, progress, color }) {
   return (
-    <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
-      {/* Page Header */}
-      <div style={{
-        padding: '14px 28px', background: '#fff', borderBottom: `1px solid ${C.borderLight}`,
-        display: 'flex', alignItems: 'center', gap: 12,
-      }}>
-        <button onClick={onBack} style={{
-          ...btnGhost, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
-        }}>
-          {Icon.arrowLeft(C.orange)}
-          <span style={{ color: C.orange }}>Back to Queue</span>
-        </button>
-        <span style={{ color: C.border }}>|</span>
-        <span style={{ fontSize: 13, color: C.textMuted }}>Company Record</span>
-      </div>
-
-      {/* Two Column Layout */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 380px', gap: 0,
-        height: 'calc(100vh - 52px - 52px - 36px)',
-        overflow: 'hidden',
-      }}>
-        {/* ═══ LEFT COLUMN (65%) ═══ */}
-        <div style={{ overflow: 'auto', padding: '24px 28px', borderRight: `1px solid ${C.borderLight}` }}>
-          {/* Company Header */}
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 24,
-          }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: 10, background: C.orange,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, fontWeight: 700, color: '#fff', flexShrink: 0,
-            }}>
-              {a.company.charAt(0)}
-            </div>
-            <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>{a.company}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                <span style={{ fontSize: 13, color: C.textMuted }}>{a.overview.industry}</span>
-                <span style={{ color: C.border }}>|</span>
-                <span style={{ fontSize: 13, color: C.textMuted }}>{a.overview.location}</span>
-                <span style={{ color: C.border }}>|</span>
-                <span style={{ fontSize: 13, color: C.textMuted }}>{a.overview.size}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                {Icon.externalLink(C.textMuted)}
-                <span style={{ fontSize: 12, color: C.orange }}>{a.website}</span>
-              </div>
-            </div>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 4,
-              ...(a.strength === 'Hot'
-                ? { background: C.hotBg, color: C.hot }
-                : { background: C.warmBg, color: C.warm }),
-            }}>
-              {a.strength === 'Hot' ? 'HOT' : 'WARM'}
-            </span>
-          </div>
-
-          {/* About This Company */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 24, overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: '#f5f8fa',
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: 13, fontWeight: 600, color: C.text,
-            }}>
-              About This Company
-            </div>
-            <div style={{ padding: '4px 0' }}>
-              {[
-                ['Company Size', a.overview.size],
-                ['Industry', a.overview.industry],
-                ['Location', a.overview.location],
-                ['Annual Revenue', a.overview.revenue],
-                ['Current Tools', a.overview.currentTools],
-                ['Founded', a.overview.founded],
-                ['Specialties', a.overview.specialties],
-              ].map(([label, val]) => (
-                <div key={label} style={{
-                  display: 'flex', padding: '10px 16px',
-                  borderBottom: `1px solid ${C.borderLight}`,
-                  fontSize: 13,
-                }}>
-                  <span style={{ width: 160, color: C.textMuted, fontWeight: 500, flexShrink: 0 }}>{label}</span>
-                  <span style={{ color: C.text }}>{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Activity Timeline */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 24, overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: '#f5f8fa',
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: 13, fontWeight: 600, color: C.text,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <span>Activity Timeline</span>
-              <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>{a.signals.length} activities</span>
-            </div>
-            <div style={{ padding: '16px' }}>
-              {a.signals.map((sig, i) => {
-                const iconKey = signalIconMap[sig.type] || 'globe';
-                const iconFn = Icon[iconKey] || Icon.globe;
-                return (
-                  <div key={i} style={{
-                    display: 'flex', gap: 12, marginBottom: i < a.signals.length - 1 ? 0 : 0,
-                    position: 'relative',
-                  }}>
-                    {/* Timeline line */}
-                    {i < a.signals.length - 1 && (
-                      <div style={{
-                        position: 'absolute', left: 15, top: 32, bottom: -16,
-                        width: 2, background: C.borderLight,
-                      }} />
-                    )}
-                    {/* Icon */}
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: sig.strength === 'hot' ? C.hotBg : '#f5f8fa',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, zIndex: 1,
-                      border: `2px solid ${sig.strength === 'hot' ? C.hot : C.borderLight}`,
-                    }}>
-                      {iconFn(sig.strength === 'hot' ? C.hot : C.textMuted)}
-                    </div>
-                    {/* Content */}
-                    <div style={{ flex: 1, paddingBottom: 20 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{sig.type}</span>
-                        {sig.strength === 'hot' && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 3,
-                            background: C.hotBg, color: C.hot,
-                          }}>HIGH INTENT</span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 13, color: C.textLight, marginTop: 2, lineHeight: 1.5 }}>
-                        {sig.detail}
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                        {Icon.clock()}
-                        <span style={{ fontSize: 11, color: C.textMuted }}>{sig.time}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* AI-Generated Call Script */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 24, overflow: 'hidden',
-          }}>
-            <div
-              onClick={() => setExpandedScript(!expandedScript)}
-              style={{
-                padding: '12px 16px', background: '#f5f8fa',
-                borderBottom: expandedScript ? `1px solid ${C.borderLight}` : 'none',
-                fontSize: 13, fontWeight: 600, color: C.text,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {Icon.aiQueue(C.orange)}
-                <span>AI-Generated Call Script</span>
-              </div>
-              <span style={{ fontSize: 18, color: C.textMuted, lineHeight: 1 }}>
-                {expandedScript ? '\u2212' : '+'}
-              </span>
-            </div>
-            {expandedScript && (
-              <div style={{ padding: '20px' }}>
-                {/* Opening */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', marginBottom: 8,
-                  }}>Opening Line</div>
-                  <div style={{
-                    padding: 14, borderRadius: 6, background: C.orangeLight,
-                    borderLeft: `3px solid ${C.orange}`, fontSize: 13, lineHeight: 1.6,
-                    fontStyle: 'italic', color: C.text,
-                  }}>
-                    "{a.callScript.opening}"
-                  </div>
-                </div>
-
-                {/* Discovery Questions */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', marginBottom: 8,
-                  }}>Discovery Questions</div>
-                  <ol style={{ paddingLeft: 20, fontSize: 13, color: C.text, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {a.callScript.discoveryQuestions.map((q, i) => (
-                      <li key={i} style={{ lineHeight: 1.6 }}>{q}</li>
-                    ))}
-                  </ol>
-                </div>
-
-                {/* Value Hook */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', marginBottom: 8,
-                  }}>Value Hook</div>
-                  <div style={{
-                    padding: 14, borderRadius: 6, background: C.tealLight,
-                    borderLeft: `3px solid ${C.teal}`, fontSize: 13, lineHeight: 1.6, color: C.text,
-                  }}>
-                    {a.callScript.valueHook}
-                  </div>
-                </div>
-
-                {/* Objection Handler */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', marginBottom: 8,
-                  }}>Objection Handler</div>
-                  <div style={{
-                    padding: 14, borderRadius: 6, background: C.warmBg,
-                    borderLeft: `3px solid ${C.warm}`, fontSize: 13, lineHeight: 1.6, color: C.text,
-                  }}>
-                    {a.callScript.objectionHandler}
-                  </div>
-                </div>
-
-                {/* CTA */}
-                <div>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', marginBottom: 8,
-                  }}>Suggested CTA</div>
-                  <div style={{
-                    padding: 14, borderRadius: 6, background: '#f5f8fa',
-                    borderLeft: `3px solid ${C.navy}`, fontSize: 13, lineHeight: 1.6, color: C.text,
-                    fontWeight: 500,
-                  }}>
-                    {a.callScript.suggestedCTA}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+    <div style={{
+      background: C.white, borderRadius: 10, border: `1px solid ${C.borderLight}`,
+      padding: 16,
+    }}>
+      <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 500, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{value}</div>
+      {subtitle && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{subtitle}</div>}
+      {progress !== undefined && (
+        <div style={{ height: 4, background: C.borderLight, borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${progress}%`, background: color, borderRadius: 2, transition: 'width 0.5s' }} />
         </div>
-
-        {/* ═══ RIGHT COLUMN (35%) ═══ */}
-        <div style={{ overflow: 'auto', padding: '24px 20px', background: '#f5f8fa' }}>
-          {/* AI Priority Score */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 16, overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: C.navy, color: '#fff',
-              fontSize: 13, fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              {Icon.aiQueue('#fff')}
-              AI Priority Score
-            </div>
-            <div style={{ padding: 16 }}>
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: `conic-gradient(${C.orange} ${a.fitScore * 3.6}deg, ${C.borderLight} 0deg)`,
-                  position: 'relative',
-                }}>
-                  <div style={{
-                    width: 58, height: 58, borderRadius: '50%', background: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, fontWeight: 700, color: C.text,
-                  }}>
-                    {a.fitScore}
-                  </div>
-                </div>
-              </div>
-              {[
-                { label: 'Fit Score', value: a.fitScore, color: C.teal },
-                { label: 'Intent Score', value: a.intentScore, color: C.orange },
-                { label: 'Timing Score', value: a.timingScore, color: C.warm },
-              ].map((s) => (
-                <div key={s.label} style={{ marginBottom: 10 }}>
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between', fontSize: 12,
-                    color: C.textMuted, marginBottom: 4,
-                  }}>
-                    <span>{s.label}</span>
-                    <span style={{ fontWeight: 600, color: C.text }}>{s.value}/100</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 3, background: C.borderLight, overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${s.value}%`, height: '100%', borderRadius: 3, background: s.color,
-                      transition: 'width 0.5s ease',
-                    }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recommended Actions */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 16, overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: '#f5f8fa',
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: 13, fontWeight: 600, color: C.text,
-            }}>
-              Recommended Actions
-            </div>
-            <div style={{ padding: '8px' }}>
-              {a.recommendedActions.map((action, i) => (
-                <div
-                  key={i}
-                  onClick={() => onAction(action)}
-                  onMouseEnter={() => setHoveredAction(i)}
-                  onMouseLeave={() => setHoveredAction(null)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px', borderRadius: 6,
-                    cursor: 'pointer',
-                    background: hoveredAction === i ? '#f0f5fa' : 'transparent',
-                    transition: 'background 0.12s',
-                    borderBottom: i < a.recommendedActions.length - 1 ? `1px solid ${C.borderLight}` : 'none',
-                  }}
-                >
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 6,
-                    background: action.type === 'call' ? C.tealLight : action.type === 'email' ? C.orangeLight : C.warmBg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    {action.type === 'call' ? Icon.phone(C.teal) : action.type === 'email' ? Icon.mail(C.orange) : Icon.deals(C.warm)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{action.label}</div>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {action.subtitle}
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 3,
-                    background: action.priority === 'high' ? C.hotBg : C.warmBg,
-                    color: action.priority === 'high' ? C.hot : C.warm,
-                    textTransform: 'uppercase', flexShrink: 0,
-                  }}>
-                    {action.priority}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Key Contacts */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            marginBottom: 16, overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: '#f5f8fa',
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: 13, fontWeight: 600, color: C.text,
-            }}>
-              Key Contacts
-            </div>
-            <div style={{ padding: '8px' }}>
-              {a.contacts.map((contact, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '12px', borderRadius: 6,
-                  borderBottom: i < a.contacts.length - 1 ? `1px solid ${C.borderLight}` : 'none',
-                }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: contact.isPrimary ? C.orange : C.borderLight,
-                    color: contact.isPrimary ? '#fff' : C.text,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 600, flexShrink: 0,
-                  }}>
-                    {contact.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{contact.name}</span>
-                      {contact.isPrimary && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 3,
-                          background: C.orangeLight, color: C.orange,
-                        }}>PRIMARY</span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{contact.title}</div>
-                    <div style={{ fontSize: 11, color: C.orange, marginTop: 3 }}>{contact.email}</div>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{contact.phone}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Conversation Starters */}
-          <div style={{
-            background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 8,
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '12px 16px', background: '#f5f8fa',
-              borderBottom: `1px solid ${C.borderLight}`,
-              fontSize: 13, fontWeight: 600, color: C.text,
-            }}>
-              Conversation Starters
-            </div>
-            <div style={{ padding: '12px 16px' }}>
-              {a.conversationStarters.map((starter, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 10, marginBottom: i < a.conversationStarters.length - 1 ? 12 : 0,
-                  padding: '10px 12px', background: '#f5f8fa', borderRadius: 6,
-                  fontSize: 13, lineHeight: 1.5, color: C.text,
-                }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: C.orangeLight, color: C.orange,
-                    fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1,
-                  }}>{i + 1}</span>
-                  <span>{starter}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
+
 /* ═══════════════════════════════════════════
-   VIEW 3: SIGNAL FEED
+   VIEW 5: HOW IT WORKS
    ═══════════════════════════════════════════ */
-function SignalFeedView({ navigateToAccount }) {
-  const [hoveredRow, setHoveredRow] = useState(null);
-
+function HowItWorksView() {
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div style={{
-        padding: '20px 28px 16px', background: '#fff', borderBottom: `1px solid ${C.borderLight}`,
-      }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text }}>Signal Feed</h1>
-        <p style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
-          Real-time buyer intent signals across all tracked accounts
-        </p>
-      </div>
-
-      <div style={{ padding: '20px 28px' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 28px' }}>
+      {/* Hero */}
+      <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div style={{
-          background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-          overflow: 'hidden',
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: C.orangeLight, color: C.orange, padding: '6px 16px',
+          borderRadius: 20, fontSize: 12, fontWeight: 600, marginBottom: 16,
         }}>
-          {signalFeed.map((sig, i) => {
-            const iconFn = signalTypeIcon[sig.type] || Icon.globe;
-            return (
-              <div
-                key={sig.id}
-                onClick={() => navigateToAccount(sig.accountId)}
-                onMouseEnter={() => setHoveredRow(sig.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '14px 20px',
-                  borderBottom: i < signalFeed.length - 1 ? `1px solid ${C.borderLight}` : 'none',
-                  cursor: 'pointer',
-                  background: hoveredRow === sig.id ? '#f0f5fa' : '#fff',
-                  transition: 'background 0.12s',
-                }}
-              >
-                {/* Signal icon */}
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  background: sig.strength === 'hot' ? C.hotBg : '#f5f8fa',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                  border: `1.5px solid ${sig.strength === 'hot' ? C.hot : C.borderLight}`,
-                }}>
-                  {iconFn(sig.strength === 'hot' ? C.hot : C.textMuted)}
-                </div>
-
-                {/* Company name */}
-                <span style={{
-                  fontWeight: 600, fontSize: 13, color: C.orange,
-                  width: 220, flexShrink: 0,
-                }}>
-                  {sig.account}
-                </span>
-
-                {/* Description */}
-                <span style={{ flex: 1, fontSize: 13, color: C.text, lineHeight: 1.4 }}>
-                  {sig.action}
-                </span>
-
-                {/* Strength badge */}
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-                  flexShrink: 0, textTransform: 'uppercase',
-                  ...(sig.strength === 'hot'
-                    ? { background: C.hotBg, color: C.hot }
-                    : { background: C.warmBg, color: C.warm }),
-                }}>
-                  {sig.strength}
-                </span>
-
-                {/* Time */}
-                <span style={{
-                  fontSize: 12, color: C.textMuted, flexShrink: 0, width: 100,
-                  display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end',
-                }}>
-                  {Icon.clock()}
-                  {sig.time}
-                </span>
-              </div>
-            );
-          })}
+          {Icon.info(C.orange)} HubSpot Native Experience
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
-   VIEW 4: PERFORMANCE DASHBOARD
-   ═══════════════════════════════════════════ */
-function DashboardView() {
-  const pd = performanceData;
-
-  return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div style={{
-        padding: '20px 28px 16px', background: '#fff', borderBottom: `1px solid ${C.borderLight}`,
-      }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text }}>Performance Dashboard</h1>
-        <p style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
-          Weekly SDR performance metrics and signal analytics
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: C.text, margin: '0 0 12px', lineHeight: 1.3 }}>
+          This Runs Natively in HubSpot
+        </h1>
+        <p style={{ fontSize: 15, color: C.textLight, maxWidth: 600, margin: '0 auto', lineHeight: 1.7 }}>
+          No separate app. No tab switching. No learning curve. Your SDRs work the AI-powered action queue
+          directly inside HubSpot using CRM Extensions and Custom Cards.
         </p>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
-        {/* Top Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-          {/* Calls vs Target — Circular */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              Calls vs Target
-            </div>
-            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
-              <svg width="80" height="80" viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="34" fill="none" stroke={C.borderLight} strokeWidth="8" />
-                <circle
-                  cx="40" cy="40" r="34" fill="none"
-                  stroke={C.orange} strokeWidth="8"
-                  strokeDasharray={`${(pd.callsMade / pd.callsTarget) * 213.6} 213.6`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 40 40)"
-                />
-              </svg>
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                fontSize: 18, fontWeight: 700, color: C.text,
-              }}>
-                {pd.callsMade}
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>{pd.callsMade} / {pd.callsTarget} calls</div>
-          </div>
+      {/* 3 Column Flow */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24, marginBottom: 48,
+      }}>
+        <FlowStep
+          number="1"
+          icon={Icon.database}
+          color={C.teal}
+          title="Signals Flow In"
+          description="Clay enrichment, website tracking, email engagement, and LinkedIn signals all pipe into HubSpot properties in real-time. Every buyer action is captured and scored."
+          items={[
+            'Clay enriches contacts with firmographic data',
+            'Website visits tracked via HubSpot pixel',
+            'Email opens, clicks, and replies scored',
+            'LinkedIn engagement via Sales Navigator',
+            'Job postings and news alerts via triggers',
+          ]}
+        />
+        <FlowStep
+          number="2"
+          icon={Icon.cpu}
+          color={C.orange}
+          title="AI Prioritizes & Sequences"
+          description="Daily at 6 AM, AI scores all accounts, generates the action queue, and drafts personalized outreach — ready for your SDR's morning."
+          items={[
+            'Account scoring: Fit + Intent + Timing',
+            'Action sequencing by priority and time',
+            'Personalized call scripts generated',
+            'Email drafts written with context',
+            'Queue optimized for conversion probability',
+          ]}
+        />
+        <FlowStep
+          number="3"
+          icon={Icon.monitor}
+          color={C.navy}
+          title="SDR Executes from HubSpot"
+          description="Reps work the queue inside HubSpot using the native dialer, email composer, and LinkedIn Sales Nav integration. Everything is logged automatically."
+          items={[
+            'Action queue on the CRM dashboard',
+            'Click-to-call with HubSpot dialer',
+            'Pre-drafted emails sent via HubSpot',
+            'All activities auto-logged to CRM',
+            'Real-time pipeline and performance tracking',
+          ]}
+        />
+      </div>
 
-          {/* Pipeline Generated */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              Pipeline This Week
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: C.teal, marginBottom: 4 }}>
-              {pd.pipelineGenerated}
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>Target: {pd.pipelineTarget}</div>
-            <div style={{ height: 6, borderRadius: 3, background: C.borderLight, overflow: 'hidden', marginTop: 10 }}>
-              <div style={{
-                width: '78%', height: '100%', borderRadius: 3, background: C.teal,
-              }} />
-            </div>
-          </div>
-
-          {/* Signal-to-Meeting */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              Signal-to-Meeting Rate
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: C.orange, marginBottom: 4 }}>
-              {pd.signalToMeeting}
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>{pd.meetingsBooked} meetings booked</div>
-          </div>
-
-          {/* Avg Response Time */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              Avg Response Time
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: C.navy, marginBottom: 4 }}>
-              {pd.avgResponseTime}
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>From signal to outreach</div>
-          </div>
+      {/* Arrow connecting the steps */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', marginBottom: 48,
+      }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${C.teal}, ${C.orange}, ${C.navy})`,
+          color: '#fff', padding: '16px 32px', borderRadius: 10,
+          fontSize: 15, fontWeight: 600, textAlign: 'center',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+        }}>
+          No separate app. No tab switching. No learning curve.
         </div>
+      </div>
+
+      {/* Tech Details */}
+      <div style={{
+        background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 32, marginBottom: 32,
+      }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>
+          Built on HubSpot's Platform
+        </h2>
+        <p style={{ fontSize: 13, color: C.textLight, lineHeight: 1.7, margin: '0 0 20px' }}>
+          This entire experience leverages HubSpot's native extensibility — no third-party iframe hacks or external tools.
+        </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {/* Top Signal Types Bar Chart */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 20 }}>
-              Top Performing Signal Types
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {pd.topSignals.map((sig) => (
-                <div key={sig.type}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                    <span style={{ color: C.text, fontWeight: 500 }}>{sig.type}</span>
-                    <span style={{ color: C.textMuted }}>{sig.conversions}% conversion</span>
-                  </div>
-                  <div style={{ height: 10, borderRadius: 5, background: C.borderLight, overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${sig.conversions}%`, height: '100%', borderRadius: 5,
-                      background: sig.conversions >= 50 ? C.teal : sig.conversions >= 35 ? C.orange : C.warm,
-                      transition: 'width 0.6s ease',
-                    }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Weekly Trend */}
-          <div style={{
-            background: '#fff', borderRadius: 8, border: `1px solid ${C.borderLight}`,
-            padding: 20,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 20 }}>
-              Weekly Activity Trend
-            </div>
-            <div style={{
-              display: 'flex', alignItems: 'flex-end', gap: 16, height: 160,
-              padding: '0 12px',
-            }}>
-              {pd.weeklyTrend.map((day) => (
-                <div key={day.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 120 }}>
-                    {/* Calls bar */}
-                    <div style={{
-                      width: 20, borderRadius: '4px 4px 0 0',
-                      background: C.orange,
-                      height: `${(day.calls / 5) * 100}%`,
-                      minHeight: day.calls > 0 ? 8 : 0,
-                      transition: 'height 0.5s ease',
-                    }} />
-                    {/* Meetings bar */}
-                    <div style={{
-                      width: 20, borderRadius: '4px 4px 0 0',
-                      background: C.teal,
-                      height: `${(day.meetings / 5) * 100}%`,
-                      minHeight: day.meetings > 0 ? 8 : 0,
-                      transition: 'height 0.5s ease',
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>{day.day}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{
-              display: 'flex', justifyContent: 'center', gap: 20, marginTop: 16,
-              fontSize: 11, color: C.textMuted,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: C.orange }} />
-                Calls
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: C.teal }} />
-                Meetings
-              </div>
-            </div>
-          </div>
+          <TechBlock
+            title="CRM Extensions (Custom Cards)"
+            description="The action queue, call scripts, and AI insights render directly on contact and company records as custom CRM cards. SDRs see everything in context without leaving the record."
+          />
+          <TechBlock
+            title="Operations Hub Workflows"
+            description="Automated workflows handle signal scoring, action queue generation, and outreach drafting. The 6 AM daily queue build runs as a scheduled Operations Hub workflow."
+          />
+          <TechBlock
+            title="HubSpot API Integration"
+            description="Real-time data sync between Clay enrichment, AI scoring engine, and HubSpot properties. Custom objects store action queue state and AI recommendations."
+          />
+          <TechBlock
+            title="Native Dialer + Email"
+            description="Calls are made through HubSpot's built-in dialer. Emails are sent through HubSpot sequences. Everything is automatically logged — no manual data entry."
+          />
         </div>
+      </div>
+
+      {/* FAQ */}
+      <div style={{
+        background: C.bg, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+        padding: 32,
+      }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 20px' }}>Frequently Asked Questions</h3>
+
+        <FAQItem
+          question="Can this really run inside HubSpot?"
+          answer="Yes. Using HubSpot's CRM Extensions (custom cards), Operations Hub workflows, and the HubSpot API, the entire experience lives on the contact/company record. Your SDRs never leave HubSpot."
+        />
+        <FAQItem
+          question="What HubSpot plan do I need?"
+          answer="This requires HubSpot Sales Hub Professional or Enterprise, plus Operations Hub Professional for the automated workflow features. Most mid-market companies already have these tiers."
+        />
+        <FAQItem
+          question="How long does implementation take?"
+          answer="Typical implementation is 2-3 weeks. Week 1: CRM configuration and data enrichment setup. Week 2: AI scoring calibration and action queue workflows. Week 3: SDR training and go-live."
+        />
+        <FAQItem
+          question="Does this replace our existing HubSpot workflows?"
+          answer="No — it enhances them. Your existing sequences, templates, and workflows continue to work. The AI action queue layers on top, providing intelligent prioritization and pre-built outreach that flows through your existing HubSpot infrastructure."
+        />
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════
-   DIALER OVERLAY
-   ═══════════════════════════════════════════ */
-function DialerOverlay({ contact, onClose }) {
-  const [callState, setCallState] = useState('idle'); // idle, ringing, connected
-  const [timer, setTimer] = useState(0);
-
-  useEffect(() => {
-    if (callState === 'ringing') {
-      const t = setTimeout(() => setCallState('connected'), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [callState]);
-
-  useEffect(() => {
-    if (callState === 'connected') {
-      const interval = setInterval(() => setTimer(t => t + 1), 1000);
-      return () => clearInterval(interval);
-    }
-  }, [callState]);
-
-  const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-
+function FlowStep({ number, icon, color, title, description, items }) {
   return (
     <div style={{
-      position: 'fixed', bottom: 24, right: 24,
-      width: 320, background: '#fff', borderRadius: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-      overflow: 'hidden', zIndex: 9000,
-      animation: 'slideUp 0.3s ease-out',
+      background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`,
+      padding: 24, display: 'flex', flexDirection: 'column',
     }}>
-      {/* Header */}
       <div style={{
-        background: C.navy, padding: '14px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Icon.phone('#fff')}
-          <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
-            {callState === 'idle' ? 'HubSpot Calling' : callState === 'ringing' ? 'Ringing...' : 'Connected'}
-          </span>
-        </div>
-        <button onClick={onClose} style={{ ...btnGhost, padding: 4 }}>
-          {Icon.close('#fff')}
-        </button>
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: '20px 16px', textAlign: 'center' }}>
         <div style={{
-          width: 52, height: 52, borderRadius: '50%', background: C.orange,
+          width: 36, height: 36, borderRadius: 10, background: `${color}15`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 12px', fontSize: 18, fontWeight: 700, color: '#fff',
         }}>
-          {contact.name.split(' ').map(n => n[0]).join('')}
+          {icon(color)}
         </div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{contact.name}</div>
-        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{contact.company}</div>
-        <div style={{ fontSize: 14, color: C.orange, fontWeight: 500, marginTop: 4 }}>{contact.phone}</div>
-
-        {callState === 'connected' && (
-          <div style={{
-            fontSize: 20, fontWeight: 600, color: C.teal, marginTop: 12,
-            fontVariantNumeric: 'tabular-nums',
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Step {number}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{title}</div>
+        </div>
+      </div>
+      <p style={{ fontSize: 13, color: C.textLight, lineHeight: 1.6, margin: '0 0 14px' }}>
+        {description}
+      </p>
+      <ul style={{ margin: 0, paddingLeft: 16, listStyle: 'none' }}>
+        {items.map((item, i) => (
+          <li key={i} style={{
+            fontSize: 12, color: C.textLight, padding: '3px 0', lineHeight: 1.5,
+            display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            {formatTime(timer)}
-          </div>
-        )}
-
-        {callState === 'ringing' && (
-          <div style={{ fontSize: 13, color: C.textMuted, marginTop: 12, animation: 'pulse 1.5s infinite' }}>
-            Connecting...
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{
-        padding: '12px 16px 16px', display: 'flex', justifyContent: 'center', gap: 16,
-      }}>
-        {callState === 'idle' ? (
-          <button
-            onClick={() => setCallState('ringing')}
-            style={{
-              ...btnPrimary, background: C.teal, width: '100%', padding: '10px 0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            {Icon.phone('#fff')}
-            Call Now
-          </button>
-        ) : (
-          <button
-            onClick={onClose}
-            style={{
-              ...btnPrimary, background: C.hot, width: '100%', padding: '10px 0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            {Icon.phoneEnd('#fff')}
-            End Call
-          </button>
-        )}
-      </div>
+            <div style={{
+              width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0,
+            }} />
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════
-   EMAIL COMPOSE OVERLAY
-   ═══════════════════════════════════════════ */
-function ComposeOverlay({ contact, onClose, onSend }) {
+function TechBlock({ title, description }) {
   return (
     <div style={{
-      position: 'fixed', bottom: 24, right: 24,
-      width: 440, background: '#fff', borderRadius: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-      overflow: 'hidden', zIndex: 9000,
-      animation: 'slideUp 0.3s ease-out',
+      background: C.bg, borderRadius: 8, padding: 16,
     }}>
-      {/* Header */}
-      <div style={{
-        background: C.navy, padding: '12px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>New Email</span>
-        <button onClick={onClose} style={{ ...btnGhost, padding: 4 }}>
-          {Icon.close('#fff')}
-        </button>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 12, color: C.textLight, lineHeight: 1.6 }}>{description}</div>
+    </div>
+  );
+}
 
-      {/* Fields */}
-      <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.borderLight}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 13 }}>
-          <span style={{ color: C.textMuted, width: 50 }}>To:</span>
-          <span style={{
-            background: '#f0f5fa', padding: '4px 10px', borderRadius: 4,
-            fontSize: 12, color: C.text,
-          }}>
-            {contact.name} &lt;{contact.email}&gt;
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-          <span style={{ color: C.textMuted, width: 50 }}>Subject:</span>
-          <span style={{ color: C.text, fontSize: 13 }}>
-            Quick question for {contact.company}
-          </span>
-        </div>
+function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{
+      borderBottom: `1px solid ${C.borderLight}`, padding: '14px 0',
+    }}>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{question}</span>
+        <span style={{
+          transform: open ? 'rotate(180deg)' : 'rotate(0)',
+          transition: 'transform 0.2s',
+        }}>
+          {Icon.chevronDown(C.textMuted)}
+        </span>
       </div>
-
-      {/* Body */}
-      <div style={{ padding: '12px 16px', minHeight: 120 }}>
+      {open && (
         <div style={{
-          fontSize: 13, color: C.text, lineHeight: 1.7,
-          background: '#f9fafb', padding: 12, borderRadius: 6, border: `1px solid ${C.borderLight}`,
+          fontSize: 13, color: C.textLight, lineHeight: 1.7, marginTop: 8,
+          animation: 'fadeIn 0.2s ease',
         }}>
-          <p>Hi {contact.name.split(' ')[0]},</p>
-          <br />
-          <p>I noticed some interesting activity from {contact.company} recently and wanted to reach out with a quick thought...</p>
-          <br />
-          <p style={{ color: C.textMuted, fontStyle: 'italic' }}>[AI-generated draft based on signal data]</p>
+          {answer}
         </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{
-        padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', gap: 8,
-        borderTop: `1px solid ${C.borderLight}`,
-      }}>
-        <button onClick={onClose} style={btnOutline}>Discard</button>
-        <button onClick={onSend} style={{
-          ...btnPrimary, display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          {Icon.send('#fff')}
-          Send
-        </button>
-      </div>
+      )}
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════
-   STAT CARD
-   ═══════════════════════════════════════════ */
-function StatCard({ label, value, suffix = '', color }) {
-  return (
-    <div style={{
-      background: '#fff', borderRadius: 8, padding: '16px 20px',
-      border: `1px solid ${C.borderLight}`,
-      borderLeft: `3px solid ${color}`,
-    }}>
-      <div style={{
-        fontSize: 11, fontWeight: 600, color: C.textMuted,
-        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4,
-      }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: C.text }}>
-        {value}{suffix && <span style={{ fontSize: 13, fontWeight: 500, color: C.textMuted }}>{suffix}</span>}
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
-   SHARED STYLES
-   ═══════════════════════════════════════════ */
-const btnPrimary = {
-  background: C.orange,
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  padding: '8px 16px',
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  transition: 'background 0.15s, transform 0.1s',
-};
-
-const btnOutline = {
-  background: 'transparent',
-  color: C.textLight,
-  border: `1px solid ${C.border}`,
-  borderRadius: 6,
-  padding: '8px 16px',
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  transition: 'background 0.15s',
-};
-
-const btnGhost = {
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  padding: 0,
-  fontFamily: 'inherit',
-};
